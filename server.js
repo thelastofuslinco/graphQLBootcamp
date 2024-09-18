@@ -1,20 +1,20 @@
-const { createSchema, createYoga } = require('graphql-yoga')
-const { createServer } = require('node:http')
-const { resolvers } = require('./resolvers')
-const { typeDefs } = require('./typeDefs')
+const { createSchema, createYoga } = require("graphql-yoga");
+const { createServer } = require("node:http");
+const { resolvers } = require("./resolvers");
+const { typeDefs } = require("./typeDefs");
 
 const schema = createSchema({
   typeDefs,
-  resolvers
-})
+  resolvers,
+});
 
 // Create a Yoga instance with a GraphQL schema.
-const yoga = createYoga({ schema })
+const yoga = createYoga({ schema, maskedErrors: false });
 
 // Pass it into a server to hook into request handlers.
-const server = createServer(yoga)
+const server = createServer(yoga);
 
 // Start the server and you're done!
 server.listen(4000, () => {
-  console.info('Server is running on http://localhost:4000/graphql')
-})
+  console.info("Server is running on http://localhost:4000/graphql");
+});

@@ -6,6 +6,32 @@ const typeDefs = `
         comments(query: String): [Comment!]!
     }
 
+    type Mutation {
+        createUser(data: CreateUserInput!): User!
+        createPost(data: CreatePostInput!): Post!
+        createComment(data: CreateCommentInput!): Comment!
+        deleteUser(author: ID!): String!
+    }
+
+    input CreateUserInput {
+        name: String!
+        email: String!
+        age: Int!
+    }
+
+    input CreatePostInput {
+        title: String!
+        body: String!
+        published: Boolean!
+        author: ID!
+    }
+
+    input CreateCommentInput {
+        text: String!
+        author: ID!
+        post: ID!
+    }
+
     type Comment {
         id: ID!
         text: String!
@@ -30,5 +56,5 @@ const typeDefs = `
         author: User!
         comments: [Comment!]!
     }
-`
-module.exports = { typeDefs }
+`;
+module.exports = { typeDefs };
