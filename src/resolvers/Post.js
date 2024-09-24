@@ -1,13 +1,13 @@
 const Post = {
-  author: ({ authorId }, args, { prisma }) => {
-    return prisma.user.findUnique({
+  author: async ({ authorId }, args, { prisma }) => {
+    return await prisma.user.findUnique({
       where: { id: parseInt(authorId) },
     });
   },
-  comments: async (parent, args, { prisma }) => {
+  comments: async ({ id }, args, { prisma }) => {
     return await prisma.comment.findMany({
       where: {
-        postId: parent.id,
+        postId: id,
       },
     });
   },

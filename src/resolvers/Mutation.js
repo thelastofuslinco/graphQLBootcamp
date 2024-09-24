@@ -99,51 +99,49 @@ const Mutation = {
 
     return newComment;
   },
-  deleteUser(parent, args, { db }) {
-    const userIndex = db.users.findIndex((user) => {
-      return user.id === args.id;
+  deleteUser: async (parent, args, { prisma }) => {
+    const { id } = args;
+
+    const userExists = await prisma.user.findUnique({
+      where: { id: parseInt(id) },
     });
 
-    if (userIndex === -1) {
-      throw new Error(`User ${args.id} does not exists.`);
+    if (!userExists) {
+      throw new Error(`User with ID ${id} does not exist.`);
     }
 
-    for (let i = db.comments.length - 1; i >= 0; i--) {
-      if (comments[i].author === args.id) {
-        db.comments.splice(i, 1);
-      }
-    }
+    await prisma.comment.deleteMany({
+      where: { authorId: parseInt(id) },
+    });
 
-    for (let i = db.posts.length - 1; i >= 0; i--) {
-      if (posts[i].author === args.id) {
-        db.posts.splice(i, 1);
-      }
-    }
+    await prisma.post.deleteMany({
+      where: { authorId: parseInt(id) },
+    });
 
-    const removedUser = db.users[userIndex];
+    await prisma.user.delete({
+      where: { id: parseInt(id) },
+    });
 
-    db.users.splice(userIndex, 1);
-
-    return removedUser;
+    return userExists;
   },
-  deletePost(parent, args, { db, pubSub }) {
-    const postIndex = db.posts.findIndex((post) => {
-      return post.id === args.id;
+  deletePost: async (parent, args, { prisma, pubSub }) => {
+    const { id } = args;
+
+    const postExists = await prisma.post.findUnique({
+      where: { id: parseInt(id) },
     });
 
-    if (postIndex === -1) {
-      throw new Error(`Post ${args.id} does not exists.`);
+    if (!postExists) {
+      throw new Error(`Post ${id} does not exists.`);
     }
 
-    for (let i = db.comments.length - 1; i >= 0; i--) {
-      if (db.comments[i].post === args.id) {
-        db.comments.splice(i, 1);
-      }
-    }
+    await prisma.comment.deleteMany({
+      where: { postId: parseInt(id) },
+    });
 
-    const removedPost = db.posts[postIndex];
-
-    db.posts.splice(postIndex, 1);
+    const removedPost = await prisma.post.delete({
+      where: { id: parseInt(id) },
+    });
 
     if (removedPost.published) {
       pubSub.publish("post", {
@@ -153,18 +151,20 @@ const Mutation = {
 
     return removedPost;
   },
-  deleteComment(parent, args, { db, pubSub }) {
-    const commentIndex = db.comments.findIndex((comment) => {
-      return comment.id === args.id;
+  deleteComment: async (parent, args, { prisma, pubSub }) => {
+    const { id } = args;
+
+    const commentExists = await prisma.comment.findUnique({
+      where: { id: parseInt(id) },
     });
 
-    if (commentIndex === -1) {
+    if (!commentExists) {
       throw new Error(`Comment ${args.id} does not exists.`);
     }
 
-    const removedComment = db.comments[commentIndex];
-
-    db.comments.splice(commentIndex, 1);
+    const removedComment = await prisma.comment.delete({
+      where: { id: parseInt(id) },
+    });
 
     pubSub.publish(`comment ${removedComment.post}`, {
       comment: { mutation: "DELETED", data: removedComment },
@@ -172,30 +172,28 @@ const Mutation = {
 
     return removedComment;
   },
-  updateUser(parent, args, { db }) {
-    const userIndex = db.users.findIndex((user) => {
-      return user.id === args.id;
+  updateUser: async (parent, args, { prisma }) => {
+    const { id, data } = args;
+
+    const userExists = await prisma.user.findUnique({
+      where: { id: parseInt(id) },
     });
 
-    if (userIndex === -1) {
-      throw new Error(`User ${args.id} does not exists.`);
+    if (!userExists) {
+      throw new Error(`User ${id} does not exist.`);
     }
 
-    const emailTest = db.users.some((user) => user.email === args.data.email);
-
-    if (emailTest) {
-      throw new Error("Email aready exists.");
-    }
-
-    const updates = ["email", "name", "age"];
-
-    updates.forEach((field) => {
-      if (typeof args.data[field] !== "undefined") {
-        db.users[userIndex][field] = args.data[field];
-      }
+    const updatedUser = await prisma.user.update({
+      where: { id: parseInt(id) },
+      data: {
+        name: data.name,
+        email: data.email,
+        age: data.age,
+        role: data.role,
+      },
     });
 
-    return db.users[userIndex];
+    return updatedUser;
   },
   updatePost(parent, args, { db, pubSub }) {
     const postIndex = db.posts.findIndex((post) => {

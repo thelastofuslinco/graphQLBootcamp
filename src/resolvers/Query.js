@@ -16,7 +16,6 @@ const Query = {
       },
     });
   },
-
   users: async (parent, { query }, { prisma }) => {
     return await prisma.user.findMany({
       where: {
@@ -26,7 +25,6 @@ const Query = {
       },
     });
   },
-
   comments: async (parent, { query }, { prisma }) => {
     return await prisma.comment.findMany({
       where: {

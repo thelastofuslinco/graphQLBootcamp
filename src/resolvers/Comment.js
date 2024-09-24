@@ -1,12 +1,12 @@
 const Comment = {
-  author: ({ authorId }, args, { prisma }) => {
-    return prisma.user.findUnique({
-      where: { id: parseInt(authorId) }, // Use a chave correta para buscar o autor
+  author: async ({ authorId }, args, { prisma }) => {
+    return await prisma.user.findUnique({
+      where: { id: parseInt(authorId) },
     });
   },
-  post: ({ postId }, args, { prisma }) => {
-    return prisma.post.findUnique({
-      where: { id: parseInt(postId) }, // Use a chave correta para buscar o post
+  post: async ({ postId }, args, { prisma }) => {
+    return await prisma.post.findUnique({
+      where: { id: parseInt(postId) },
     });
   },
 };
