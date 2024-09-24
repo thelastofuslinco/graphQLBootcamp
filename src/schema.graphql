@@ -19,7 +19,18 @@ type Mutation {
 
 type Subscription {
   countdown(from: Int!): Int!
-  comment(postId: ID!): Comment
+  comment(postId: ID!): CommentSubscriptionPayload!
+  post: PostSubscriptionPayload!
+}
+
+type PostSubscriptionPayload {
+  mutation: MutationType!
+  data: Post!
+}
+
+type CommentSubscriptionPayload {
+  mutation: MutationType!
+  data: Comment!
 }
 
 input UpdateCommentInput {
@@ -42,6 +53,7 @@ input CreateUserInput {
   name: String!
   email: String!
   age: Int!
+  role: UserRole!
 }
 
 input CreatePostInput {
@@ -69,6 +81,7 @@ type User {
   name: String!
   email: String!
   age: Int
+  role: UserRole!
   posts: [Post!]!
   comments: [Comment!]!
 }
@@ -80,4 +93,16 @@ type Post {
   published: Boolean!
   author: User!
   comments: [Comment!]!
+}
+
+enum UserRole {
+  ADMIN
+  EDITOR
+  SUBSCRIBER
+}
+
+enum MutationType {
+  CREATED
+  UPDATED
+  DELETED
 }

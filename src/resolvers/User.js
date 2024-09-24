@@ -1,9 +1,13 @@
 const User = {
-  posts(parent, args, { db }) {
-    return db.posts.filter((post) => post.author === parent.id);
+  posts: async ({ id }, args, { prisma }) => {
+    return prisma.user.findUnique({
+      where: { id: parseInt(id) },
+    });
   },
-  comments(parent, args, { db }) {
-    return db.comments.filter((comment) => comment.author === parent.id);
+  comments: async ({ id }, args, { prisma }) => {
+    return await prisma.comment.findMany({
+      where: { id: parseInt(id) },
+    });
   },
 };
 

@@ -7,20 +7,34 @@ const Query = {
       age: 24,
     };
   },
-  posts(parent, { query }, { db }) {
-    return db.posts.filter((post) =>
-      post.title.toLowerCase().includes(query?.toLowerCase() || "")
-    );
+  posts: async (parent, { query }, { prisma }) => {
+    return await prisma.post.findMany({
+      where: {
+        title: {
+          contains: query || "",
+        },
+      },
+    });
   },
-  users(parent, { query }, { db }) {
-    return db.users.filter((user) =>
-      user.name.toLowerCase().includes(query?.toLowerCase() || "")
-    );
+
+  users: async (parent, { query }, { prisma }) => {
+    return await prisma.user.findMany({
+      where: {
+        name: {
+          contains: query || "",
+        },
+      },
+    });
   },
-  comments(parent, { query }, { db }) {
-    return db.comments.filter((comment) =>
-      comment.text.toLowerCase().includes(query?.toLowerCase() || "")
-    );
+
+  comments: async (parent, { query }, { prisma }) => {
+    return await prisma.comment.findMany({
+      where: {
+        text: {
+          contains: query || "",
+        },
+      },
+    });
   },
 };
 

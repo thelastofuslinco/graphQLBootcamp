@@ -1,9 +1,13 @@
 const Comment = {
-  author(parent, args, { db }) {
-    return db.users.find((user) => user.id === parent.author);
+  author: ({ authorId }, args, { prisma }) => {
+    return prisma.user.findUnique({
+      where: { id: parseInt(authorId) }, // Use a chave correta para buscar o autor
+    });
   },
-  post(parent, args, { db }) {
-    return db.posts.find((post) => post.id === parent.post);
+  post: ({ postId }, args, { prisma }) => {
+    return prisma.post.findUnique({
+      where: { id: parseInt(postId) }, // Use a chave correta para buscar o post
+    });
   },
 };
 

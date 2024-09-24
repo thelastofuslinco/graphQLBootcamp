@@ -2,8 +2,10 @@ const { createServer } = require("node:http");
 const path = require("node:path");
 const fs = require("node:fs");
 
+const { PrismaClient } = require("@prisma/client");
 const { createSchema, createYoga, createPubSub } = require("graphql-yoga");
 const pubSub = createPubSub();
+const prisma = new PrismaClient();
 
 const Comment = require("./resolvers/Comment");
 const User = require("./resolvers/User");
@@ -33,7 +35,7 @@ const schema = createSchema({
 
 // Create a Yoga instance with a GraphQL schema.
 const yoga = createYoga({
-  context: { db, pubSub },
+  context: { db, pubSub, prisma },
   schema,
   maskedErrors: false,
 });

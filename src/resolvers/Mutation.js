@@ -1,49 +1,102 @@
-const uuid = require("uuid");
-
 const Mutation = {
-  createUser(parent, args, { db }, info) {
-    const emailTest = db.users.some((user) => user.email === args.data.email);
+  createUser: async (parent, args, { prisma }) => {
+    try {
+      const isValidEmail = (email) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+      };
 
-    if (emailTest) {
-      throw new Error("Email aready exists.");
+      if (!isValidEmail(args.data.email)) {
+        throw new Error(
+          "O e-mail fornecido é inválido. Por favor, forneça um e-mail válido."
+        );
+      }
+
+      return await prisma.user.create({
+        data: {
+          ...args.data,
+        },
+      });
+    } catch (error) {
+      // Verifica se o erro é relacionado à restrição de unicidade
+      if (
+        error.code === "P2002" &&
+        error.meta &&
+        error.meta.target.includes("email")
+      ) {
+        throw new Error(
+          "Esse e-mail já está em uso. Por favor, utilize outro e-mail."
+        );
+      }
+
+      // Caso contrário, lança o erro original
+      throw new Error(error.message);
     }
-
-    const user = { ...args.data, id: uuid.v4() };
-    db.users.push(user);
-    return user;
   },
-  createPost(parent, args, { db }, info) {
-    const userExist = db.users.some((user) => user.id === args.data.author);
+  createPost: async (parent, args, { prisma, pubSub }) => {
+    const userExist = await prisma.user.findUnique({
+      where: { id: parseInt(args.data.author) },
+    });
 
     if (!userExist) {
-      throw new Error(`User ${args.data.author} does not exists.`);
+      throw new Error(`User ${args.data.author} does not exist.`);
     }
 
-    const newPost = { ...args.data, id: uuid.v4() };
+    const newPost = await prisma.post.create({
+      data: {
+        title: args.data.title,
+        body: args.data.body,
+        published: args.data.published,
+        author: {
+          connect: { id: parseInt(args.data.author) },
+        },
+      },
+    });
 
-    db.posts.push(newPost);
+    if (newPost.published) {
+      pubSub.publish("post", {
+        post: {
+          mutation: "CREATED",
+          data: newPost,
+        },
+      });
+    }
+
     return newPost;
   },
-  createComment(parent, args, { db, pubSub }) {
-    const userExist = db.users.some((user) => user.id === args.data.author);
+  createComment: async (parent, args, { prisma, pubSub }) => {
+    const userExist = await prisma.user.findUnique({
+      where: { id: parseInt(args.data.author) },
+    });
 
     if (!userExist) {
-      throw new Error(`User ${args.data.author} not exists.`);
+      throw new Error(`User ${args.data.author} does not exist.`);
     }
 
-    const postExists = db.posts.some((post) => post.id === args.data.post);
+    const postExists = await prisma.post.findUnique({
+      where: { id: parseInt(args.data.post) },
+    });
 
     if (!postExists) {
       throw new Error(`Post ${args.data.post} does not exists.`);
     }
 
-    const newComment = { ...args.data, id: uuid.v4() };
-
-    db.comments.push(newComment);
+    const newComment = await prisma.comment.create({
+      data: {
+        text: args.data.text,
+        author: {
+          connect: { id: parseInt(args.data.author) },
+        },
+        post: {
+          connect: { id: parseInt(args.data.post) },
+        },
+      },
+    });
 
     pubSub.publish(`comment ${args.data.post}`, {
-      comment: newComment,
+      comment: { mutation: "CREATED", data: newComment },
     });
+
     return newComment;
   },
   deleteUser(parent, args, { db }) {
@@ -67,11 +120,13 @@ const Mutation = {
       }
     }
 
+    const removedUser = db.users[userIndex];
+
     db.users.splice(userIndex, 1);
 
-    return db.users[userIndex];
+    return removedUser;
   },
-  deletePost(parent, args, { db }) {
+  deletePost(parent, args, { db, pubSub }) {
     const postIndex = db.posts.findIndex((post) => {
       return post.id === args.id;
     });
@@ -81,16 +136,24 @@ const Mutation = {
     }
 
     for (let i = db.comments.length - 1; i >= 0; i--) {
-      if (comments[i].post === args.id) {
+      if (db.comments[i].post === args.id) {
         db.comments.splice(i, 1);
       }
     }
 
+    const removedPost = db.posts[postIndex];
+
     db.posts.splice(postIndex, 1);
 
-    return db.posts[postIndex];
+    if (removedPost.published) {
+      pubSub.publish("post", {
+        post: { mutation: "DELETED", data: removedPost },
+      });
+    }
+
+    return removedPost;
   },
-  deleteComment(parent, args, { db }) {
+  deleteComment(parent, args, { db, pubSub }) {
     const commentIndex = db.comments.findIndex((comment) => {
       return comment.id === args.id;
     });
@@ -99,9 +162,15 @@ const Mutation = {
       throw new Error(`Comment ${args.id} does not exists.`);
     }
 
+    const removedComment = db.comments[commentIndex];
+
     db.comments.splice(commentIndex, 1);
 
-    return db.comments[commentIndex];
+    pubSub.publish(`comment ${removedComment.post}`, {
+      comment: { mutation: "DELETED", data: removedComment },
+    });
+
+    return removedComment;
   },
   updateUser(parent, args, { db }) {
     const userIndex = db.users.findIndex((user) => {
@@ -128,7 +197,7 @@ const Mutation = {
 
     return db.users[userIndex];
   },
-  updatePost(parent, args, { db }) {
+  updatePost(parent, args, { db, pubSub }) {
     const postIndex = db.posts.findIndex((post) => {
       return post.id === args.id;
     });
@@ -145,9 +214,16 @@ const Mutation = {
       }
     });
 
+    pubSub.publish("post", {
+      post: {
+        mutation: "UPDATED",
+        data: db.posts[postIndex],
+      },
+    });
+
     return db.posts[postIndex];
   },
-  updateComment(parent, args, { db }) {
+  updateComment(parent, args, { db, pubSub }) {
     const commentIndex = db.comments.findIndex((comment) => {
       return comment.id === args.id;
     });
@@ -162,6 +238,13 @@ const Mutation = {
       if (typeof args.data[field] !== "undefined") {
         db.comments[commentIndex][field] = args.data[field];
       }
+    });
+
+    pubSub.publish(`comment ${db.comments[commentIndex].post}`, {
+      comment: {
+        mutation: "UPDATED",
+        data: db.comments[commentIndex],
+      },
     });
 
     return db.comments[commentIndex];
