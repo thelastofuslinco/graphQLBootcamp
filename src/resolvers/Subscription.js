@@ -11,20 +11,20 @@ const Subscription = {
     },
   },
   comment: {
-    subscribe(parent, args, { db, pubSub }) {
-      const postIndex = db.posts.findIndex((post) => {
-        return post.id === args.postId;
+    subscribe: async (parent, args, { prisma, pubSub }) => {
+      const postExists = await prisma.post.findUnique({
+        where: { id: parseInt(args.postId) },
       });
 
-      if (postIndex === -1) {
-        throw new Error(`Post ${args.postId} does not exists.`);
+      if (!postExists) {
+        throw new Error(`Post ${id} does not exist.`);
       }
 
       return pubSub.subscribe(`comment ${postIndex}`);
     },
   },
   post: {
-    subscribe(parent, args, { db, pubSub }) {
+    subscribe(parent, args, { pubSub }) {
       return pubSub.subscribe("post");
     },
   },

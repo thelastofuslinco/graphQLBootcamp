@@ -14,8 +14,6 @@ const Query = require("./resolvers/Query");
 const Mutation = require("./resolvers/Mutation");
 const Subscription = require("./resolvers/Subscription");
 
-const db = require("./db");
-
 const typeDefs = fs.readFileSync(
   path.join(__dirname, "schema.graphql"),
   "utf-8"
@@ -35,7 +33,7 @@ const schema = createSchema({
 
 // Create a Yoga instance with a GraphQL schema.
 const yoga = createYoga({
-  context: { db, pubSub, prisma },
+  context: { pubSub, prisma },
   schema,
   maskedErrors: false,
 });

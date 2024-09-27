@@ -195,57 +195,61 @@ const Mutation = {
 
     return updatedUser;
   },
-  updatePost(parent, args, { db, pubSub }) {
-    const postIndex = db.posts.findIndex((post) => {
-      return post.id === args.id;
+  updatePost: async (parent, args, { prisma, pubSub }) => {
+    const { id, data } = args;
+
+    const postExists = await prisma.post.findUnique({
+      where: { id: parseInt(id) },
     });
 
-    if (postIndex === -1) {
-      throw new Error(`Post ${args.id} does not exists.`);
+    if (!postExists) {
+      throw new Error(`Post ${id} does not exist.`);
     }
 
-    const updates = ["title", "body", "published"];
-
-    updates.forEach((field) => {
-      if (typeof args.data[field] !== "undefined") {
-        db.posts[postIndex][field] = args.data[field];
-      }
+    const updatedPost = await prisma.post.update({
+      where: { id: parseInt(id) },
+      data: {
+        title: data.title,
+        body: data.body,
+        published: data.published,
+      },
     });
 
     pubSub.publish("post", {
       post: {
         mutation: "UPDATED",
-        data: db.posts[postIndex],
+        data: updatedPost,
       },
     });
 
-    return db.posts[postIndex];
+    return updatedPost;
   },
-  updateComment(parent, args, { db, pubSub }) {
-    const commentIndex = db.comments.findIndex((comment) => {
-      return comment.id === args.id;
+  updateComment: async (parent, args, { prisma, pubSub }) => {
+    const { id, data } = args;
+
+    const commentExists = await prisma.comment.findUnique({
+      where: { id: parseInt(id) },
     });
 
-    if (commentIndex === -1) {
-      throw new Error(`Comment ${args.id} does not exists.`);
+    if (!commentExists) {
+      throw new Error(`Comment ${id} does not exist.`);
     }
 
-    const updates = ["text"];
-
-    updates.forEach((field) => {
-      if (typeof args.data[field] !== "undefined") {
-        db.comments[commentIndex][field] = args.data[field];
-      }
-    });
-
-    pubSub.publish(`comment ${db.comments[commentIndex].post}`, {
-      comment: {
-        mutation: "UPDATED",
-        data: db.comments[commentIndex],
+    const updatedComment = await prisma.comment.update({
+      where: { id: parseInt(id) },
+      data: {
+        text: data.text,
       },
     });
 
-    return db.comments[commentIndex];
+    pubSub.publish("post", {
+      post: {
+        mutation: "UPDATED",
+        data: updatedComment,
+      },
+    });
+
+    return updatedComment;
   },
 };
 
